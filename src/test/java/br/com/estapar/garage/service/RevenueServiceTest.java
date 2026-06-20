@@ -14,6 +14,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -45,5 +46,22 @@ class RevenueServiceTest {
         assertEquals(expectedRevenue, response.amount());
         assertEquals("BRL", response.currency());
         assertNotNull(response.timestamp());
+    }
+
+    @Test
+    void testGetDailyRevenue_amountHasTwoDecimalsAndIsoTimestamp() {
+        LocalDate testDate = LocalDate.of(2025, 1, 1);
+        RevenueRequestDTO request = new RevenueRequestDTO(testDate, "A");
+        // Query retorna 0 "cru" (sem escala) quando não há receita.
+        when(sessionRepository.calculateTotalRevenueBySectorAndDate(eq("A"), eq(testDate)))
+                .thenReturn(BigDecimal.ZERO);
+
+        RevenueResponseDTO response = revenueService.getDailyRevenue(request);
+
+        // amount deve sair como 0.00 (2 casas), conforme exemplo do PDF.
+        assertEquals("0.00", response.amount().toPlainString());
+        // timestamp ISO-8601 UTC com milissegundos e sufixo Z (ex.: 2025-01-01T12:00:00.000Z).
+        assertTrue(response.timestamp().matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z"),
+                "timestamp fora do formato esperado: " + response.timestamp());
     }
 }

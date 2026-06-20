@@ -23,14 +23,13 @@ public class GarageStartupService {
     private final SectorRepository sectorRepository;
     private final SpotRepository spotRepository;
 
-    @Value("${simulator.url:http://localhost:8080}")
+    @Value("${simulator.url:http://localhost:3000}")
     private String simulatorUrl;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void SyncGarageData() {
-        log.info("Buscando dados da garagem no simulador...");
-        System.out.println("DEBUG: Tentando conectar no simulador em: " + simulatorUrl);
+        log.info("Buscando dados da garagem no simulador em {}...", simulatorUrl);
         try {
             GarageSyncDTO response = restTemplate.getForObject(simulatorUrl + "/garage", GarageSyncDTO.class);
 
@@ -57,10 +56,16 @@ public class GarageStartupService {
                             .build();
                     spotRepository.save(spot);
                 });
-                log.info("Garagem sincronizada com sucesso!");
+                log.info("Garagem sincronizada com sucesso! {} setor(es), {} vaga(s).",
+                        response.garage().size(), response.spots().size());
+            } else {
+                log.error("Simulador retornou resposta vazia em {}/garage. " +
+                        "A garagem ficará sem vagas até uma sincronização bem-sucedida.", simulatorUrl);
             }
         } catch (Exception e) {
-            log.error("Erro ao sincronizar dados da garagem no startup", e);
+            log.error("FALHA ao sincronizar dados da garagem no startup ({}). " +
+                    "Verifique se o simulador está ativo. Nenhuma entrada será aceita até sincronizar.",
+                    simulatorUrl, e);
         }
     }
 }

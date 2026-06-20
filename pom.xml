@@ -8,7 +8,7 @@
 		<version>3.5.15</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>om.projeto</groupId>
+	<groupId>br.com.estapar</groupId>
 	<artifactId>desafio-tecnico-estapar-backend-jr</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
@@ -52,6 +52,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -20,8 +20,8 @@ public class ParkingSession {
     private String licensePlate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sector_id", nullable = false)
-    private Sector sector;
+    @JoinColumn(name = "sector_id")
+    private Sector sector; // Preenchido no evento PARKED (setor só é conhecido ao estacionar)
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "spot_id")
@@ -33,8 +33,8 @@ public class ParkingSession {
     @Column(name = "exit_time")
     private Instant exitTime; // Preenchido no evento EXIT
 
-    @Column(name = "dynamic_hourly_rate", nullable = false)
-    private BigDecimal dynamicHourlyRate; // Valor/hora calculado no momento da entrada
+    @Column(name = "dynamic_hourly_rate")
+    private BigDecimal dynamicHourlyRate; // Valor/hora calculado no momento do PARKED
 
     @Column(name = "total_amount")
     private BigDecimal totalAmount; // Valor final cobrado (preenchido no EXIT)
