@@ -2,7 +2,7 @@ package br.com.estapar.garage.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "parking_sessions")
@@ -28,10 +28,10 @@ public class ParkingSession {
     private Spot spot; // Preenchido no evento PARKED
 
     @Column(name = "entry_time", nullable = false)
-    private LocalDateTime entryTime;
+    private Instant entryTime;
 
     @Column(name = "exit_time")
-    private LocalDateTime exitTime; // Preenchido no evento EXIT
+    private Instant exitTime; // Preenchido no evento EXIT
 
     @Column(name = "dynamic_hourly_rate", nullable = false)
     private BigDecimal dynamicHourlyRate; // Valor/hora calculado no momento da entrada

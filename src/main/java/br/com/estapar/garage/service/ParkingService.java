@@ -21,17 +21,15 @@ public class ParkingService {
 
     @Transactional
     public void processWebhook(WebhookEventDTO event) {
-        switch (event.event_type()) {
+        switch (event.eventType()) {
             case "ENTRY" -> handleEntry(event);
             case "PARKED" -> handleParked(event);
             case "EXIT" -> handleExit(event);
-            default -> throw new IllegalArgumentException("Evento desconhecido: " + event.event_type());
+            default -> throw new IllegalArgumentException("Evento desconhecido: " + event.eventType());
         }
     }
 
     private void handleEntry(WebhookEventDTO event) {
-        // Como o evento ENTRY não manda o setor, e o teste diz que "setores são lógicos",
-        // pegamos o primeiro setor configurado (ou iteramos para achar um com vaga).
         Sector sector = sectorRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new RuntimeException("Nenhum setor configurado."));
 
@@ -41,13 +39,20 @@ public class ParkingService {
             throw new RuntimeException("Estacionamento cheio!");
         }
 
+        // Reserva uma vaga fisicamente na entrada
+        Spot spot = spotRepository.findFirstBySectorIdAndStatus(sector.getId(), SpotStatus.AVAILABLE)
+                .orElseThrow(() -> new RuntimeException("Estacionamento cheio fisicamente!"));
+        spot.setStatus(SpotStatus.OCCUPIED);
+        spotRepository.save(spot);
+
         double occupationPercentage = (double) occupiedSpots / sector.getMaxCapacity();
         BigDecimal dynamicRate = calculateDynamicRate(sector.getBasePrice(), occupationPercentage);
 
         ParkingSession session = ParkingSession.builder()
-                .licensePlate(event.license_plate())
+                .licensePlate(event.licensePlate())
                 .sector(sector)
-                .entryTime(event.entry_time())
+                .spot(spot) // Vaga já reservada
+                .entryTime(event.entryTime())
                 .dynamicHourlyRate(dynamicRate)
                 .status(SessionStatus.ACTIVE)
                 .build();
@@ -56,26 +61,32 @@ public class ParkingService {
     }
 
     private void handleParked(WebhookEventDTO event) {
-        ParkingSession session = sessionRepository.findByLicensePlateAndStatus(event.license_plate(), SessionStatus.ACTIVE)
+        ParkingSession session = sessionRepository.findByLicensePlateAndStatus(event.licensePlate(), SessionStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("Veículo não encontrado na entrada."));
 
-        Spot spot = spotRepository.findByLatAndLng(event.lat(), event.lng())
+        Spot actualSpot = spotRepository.findByLatAndLng(event.lat(), event.lng())
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada com as coordenadas informadas."));
 
-        spot.setStatus(SpotStatus.OCCUPIED);
-        spotRepository.save(spot);
+        // Se a vaga em que o carro parou for diferente da sugerida/reservada na entrada
+        Spot assignedSpot = session.getSpot();
+        if (assignedSpot != null && !assignedSpot.getId().equals(actualSpot.getId())) {
+            assignedSpot.setStatus(SpotStatus.AVAILABLE);
+            spotRepository.save(assignedSpot);
+        }
 
-        session.setSpot(spot);
-        // Atualiza o setor para o setor real da vaga física, caso seja diferente
-        session.setSector(spot.getSector());
+        actualSpot.setStatus(SpotStatus.OCCUPIED);
+        spotRepository.save(actualSpot);
+
+        session.setSpot(actualSpot);
+        session.setSector(actualSpot.getSector());
         sessionRepository.save(session);
     }
 
     private void handleExit(WebhookEventDTO event) {
-        ParkingSession session = sessionRepository.findByLicensePlateAndStatus(event.license_plate(), SessionStatus.ACTIVE)
+        ParkingSession session = sessionRepository.findByLicensePlateAndStatus(event.licensePlate(), SessionStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("Veículo não encontrado."));
 
-        session.setExitTime(event.exit_time());
+        session.setExitTime(event.exitTime());
         session.setStatus(SessionStatus.FINISHED);
 
         // Libera a vaga

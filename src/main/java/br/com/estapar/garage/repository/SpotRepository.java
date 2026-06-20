@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface SpotRepository extends JpaRepository<Spot,Long> {
     Optional<Spot> findByLatAndLng(Double lat, Double lng);
     long countBySectorIdAndStatus(String sectorId, br.com.estapar.garage.model.SpotStatus status);
+    Optional<Spot> findFirstBySectorIdAndStatus(String sectorId, br.com.estapar.garage.model.SpotStatus status);
 }
